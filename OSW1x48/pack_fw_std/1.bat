@@ -1,0 +1,1 @@
+cmd /k "start pack_fw.exe D:\Work\stm32_project\45070039_1x48\OSW1x48\OSW1x48\MDK-ARM\OSW1x48\OSW1x48.bin && exit"

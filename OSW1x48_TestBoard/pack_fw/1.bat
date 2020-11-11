@@ -1,0 +1,1 @@
+cmd /k "start pack_fw.exe D:\Work\stm32_project\45070039_1x48\OSW1x48_TestBoard\test_board_2_std\MDK-ARM\test_board_2_std\test_board_2_std.bin && exit"
