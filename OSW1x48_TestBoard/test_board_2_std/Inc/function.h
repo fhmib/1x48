@@ -69,6 +69,34 @@ typedef enum {
   FW_FILE_HEADER_LENGTH,
 } FwFileHeader;
 
+typedef enum {
+  EE_TAG_SUPPLIER         = 0x0000,
+  EE_TAG_NAME             = 0x0020,
+  EE_TAG_HW_VER           = 0x0040,
+  EE_TAG_SN               = 0x0060,
+  EE_TAG_SW_VER           = 0x0080,
+  EE_TAG_MENU_DATE        = 0x00A0,
+  EE_TAG_CALI_DATE        = 0x00C0,
+  EE_TAG_PN               = 0x00E0,
+  
+  EE_TEST_TYPE            = 0x0100,
+  EE_TEST_COUNT           = 0x0104,
+  EE_IN_TYPE              = 0x0108,
+  EE_IN_COUNT             = 0x010C,
+  EE_OUT_TYPE             = 0x0110,
+  EE_OUT_COUNT            = 0x0114,
+  EE_TEST_WAVE            = 0x0118,
+  EE_IN_WAVE              = 0x0138,
+  EE_TEST0_OUT_IL         = 0x0158,
+  EE_TEST0_OUT_IL_CRC     = 0x0258,
+  EE_TEST1_OUT_IL         = 0x025C,
+  EE_TEST1_OUT_IL_CRC     = 0x035C,
+  EE_IN_OUT_IL            = 0x0360,
+  EE_IN_OUT_IL_CRC        = 0x0460,
+
+  EE_RESERVE              = 0x0464,
+} EepromMap;
+
 
 int8_t cmd_power(uint8_t argc, char **argv);
 int8_t cmd_upgrade(uint8_t argc, char **argv);
@@ -86,6 +114,7 @@ int8_t get_log_time(void);
 int8_t cmd_eeprom(uint8_t argc, char **argv);
 int8_t eeprom_write(uint8_t argc, char **argv);
 int8_t eeprom_read(uint8_t argc, char **argv);
+int8_t eeprom_dump(void);
 int8_t cmd_i2c(uint8_t argc, char **argv);
 
 int8_t cmd_for_debug(uint8_t argc, char **argv);
@@ -93,7 +122,10 @@ int8_t debug_dac(uint8_t argc, char **argv);
 int8_t debug_adc(uint8_t argc, char **argv);
 int8_t debug_pin(uint8_t argc, char **argv);
 int8_t debug_switch_io(uint8_t argc, char **argv);
+int8_t debug_tag(uint8_t argc, char **argv);
+int8_t debug_cal_sw(uint8_t argc, char **argv);
 int8_t debug_cal(uint8_t argc, char **argv);
+int8_t debug_check_cali(void);
 int8_t debug_dump(uint8_t argc, char **argv);
 int8_t debug_reset_fw(uint8_t argc, char **argv);
 int8_t debug_reset_cali(uint8_t argc, char **argv);
@@ -105,7 +137,6 @@ int8_t debug_send_hex(uint8_t argc, char **argv);
 int8_t debug_upgrade_bootloader_mode(void);
 int8_t debug_upgrade_bootloader_install(void);
 int8_t debug_get_inter_exp(void);
-int8_t debug_unlock(void);
 
 int8_t process_command(uint32_t cmd, uint8_t *pdata, uint32_t len, uint8_t *rx_buf, uint32_t *rx_len);
 uint8_t Cal_Check(uint8_t *pdata, uint32_t len);
@@ -113,6 +144,7 @@ uint16_t UpdateCRC16(uint16_t crc_in, uint8_t byte);
 uint16_t Cal_CRC16(const uint8_t* p_data, uint32_t size);
 uint32_t Cal_CRC32(uint8_t* packet, uint32_t length);
 void PRINT_HEX(char *head, uint8_t *pdata, uint32_t len);
+void PRINT_DATA_USE_CSV(char *head, uint8_t *pdata, uint32_t len);
 void PRINT_CHAR(char *head, uint8_t *pdata, uint32_t len);
 uint32_t switch_endian(uint32_t i);
 void BE32_To_Buffer(uint32_t data, uint8_t *pbuf);

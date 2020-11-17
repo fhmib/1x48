@@ -316,6 +316,8 @@ int8_t cmd_eeprom(uint8_t argc, char **argv)
     return eeprom_write(argc, argv);
   } else if (argc == 4 && !strcasecmp(argv[1], "read")) {
     return eeprom_read(argc, argv);
+  } else if (argc == 2 && !strcasecmp(argv[1], "dump")) {
+    return eeprom_dump();
   } else {
     cmd_help2(argv[0]);
   }
@@ -351,6 +353,20 @@ int8_t eeprom_read(uint8_t argc, char **argv)
   }
   
   PRINT_HEX("EEPROM", fw_buf, length);
+  
+  return 0;
+}
+
+int8_t eeprom_dump(void)
+{
+  uint32_t size = EE_RESERVE - 0;
+  
+  if (I2cEepromRead(EEPROM_ADDR, 0, fw_buf, size) != HAL_OK) {
+    PRINT("Read from EEPROM failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+    return 1;
+  }
+  
+  PRINT_DATA_USE_CSV("EEPROM DUMP", fw_buf, size);
   
   return 0;
 }
@@ -398,8 +414,12 @@ int8_t cmd_for_debug(uint8_t argc, char **argv)
     return debug_pin(argc, argv);
   } else if (argc == 3 && !strcasecmp(argv[1], "switch_io")) {
     return debug_switch_io(argc, argv);
-  } else if (argc >= 5 && !strcasecmp(argv[1], "cal")) {
+  } else if (argc >= 5 && !strcasecmp(argv[1], "cal") && !strncasecmp(argv[2], "sw", 2)) {
+    return debug_cal_sw(argc, argv);
+  } else if (argc >= 4 && !strcasecmp(argv[1], "cal")) {
     return debug_cal(argc, argv);
+  } else if (argc == 2 && !strcasecmp(argv[1], "check_cali")) {
+    return debug_check_cali();
   } else if (argc == 3 && !strcasecmp(argv[1], "dump")) {
     return debug_dump(argc, argv);
   } else if (argc == 3 && !strcasecmp(argv[1], "fw") && !strcasecmp(argv[2], "reset")) {
@@ -424,8 +444,8 @@ int8_t cmd_for_debug(uint8_t argc, char **argv)
     return debug_upgrade_bootloader_install();
   } else if (argc == 2 && !strcasecmp(argv[1], "inter_exp")) {
     return debug_get_inter_exp();
-  } else if (argc == 2 && !strcasecmp(argv[1], "unlock")) {
-    return debug_unlock();
+  } else if (argc > 2 && !strcasecmp(argv[1], "tag")) {
+    return debug_tag(argc, argv);
   } else {
     cmd_help2(argv[0]);
     return 0;
@@ -629,7 +649,56 @@ int8_t debug_switch_io(uint8_t argc, char **argv)
   return 0;
 }
 
-int8_t debug_cal(uint8_t argc, char **argv)
+int8_t debug_tag(uint8_t argc, char **argv)
+{
+  uint16_t addr;
+
+  if (argc == 3 && !strcasecmp(argv[2], "dump")) {
+    if (I2cEepromRead(EEPROM_ADDR, 0, fw_buf, 0x100) != HAL_OK) {
+      PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+    }
+    PRINT_CHAR("TAG INFO", fw_buf, 0x100);
+    return 0;
+  }
+
+  if (argc != 4) {
+    cmd_help2(argv[0]);
+    return 0;
+  }
+
+  if (strlen(argv[3]) > 32) {
+    PRINT("Tag length exceeds limit\r\n");
+    return 0;
+  }
+
+  memset(fw_buf, 0xFF, 32);
+  memcpy(fw_buf, argv[3], strlen(argv[3]));
+  if (!strcasecmp(argv[2], "supplier")) {
+    addr = EE_TAG_SUPPLIER;
+  } else if (!strcasecmp(argv[2], "module_name")) {
+    addr = EE_TAG_NAME;
+  } else if (!strcasecmp(argv[2], "hw_ver")) {
+    addr = EE_TAG_HW_VER;
+  } else if (!strcasecmp(argv[2], "sn")) {
+    addr = EE_TAG_SN;
+  } else if (!strcasecmp(argv[2], "sw_ver")) {
+    addr = EE_TAG_SW_VER;
+  } else if (!strcasecmp(argv[2], "menu_date")) {
+    addr = EE_TAG_MENU_DATE;
+  } else if (!strcasecmp(argv[2], "cali_date")) {
+    addr = EE_TAG_CALI_DATE;
+  } else if (!strcasecmp(argv[2], "pn")) {
+    addr = EE_TAG_PN;
+  }
+
+  if (I2cEepromWrite(EEPROM_ADDR, addr, fw_buf, 32) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+
+  return 0;
+}
+
+int8_t debug_cal_sw(uint8_t argc, char **argv)
 {
   uint32_t sw_num, num;
   int32_t val_x, val_y;
@@ -637,7 +706,7 @@ int8_t debug_cal(uint8_t argc, char **argv)
 
   if (argc == 6 && !strncasecmp(argv[2], "sw", 2)) {
     sw_num = strtoul(argv[2] + 2, NULL, 10);
-    if (sw_num < 1 || sw_num > 7) {
+    if (sw_num < 1 || sw_num > 4) {
       PRINT("Switch number invalid\r\n");
       return 1;
     }
@@ -659,12 +728,164 @@ int8_t debug_cal(uint8_t argc, char **argv)
   return ret;
 }
 
+int8_t debug_cal(uint8_t argc, char **argv)
+{
+  uint16_t addr;
+  int32_t number, val;
+  double d_val;
+
+  if (argc == 4 && !strcasecmp(argv[2], "test_type")) {
+    addr = EE_TEST_TYPE;
+    number = 1;
+    sscanf(argv[3], "%d", &val);
+  } else if (argc == 4 && !strcasecmp(argv[2], "test_count")) {
+    addr = EE_TEST_COUNT;
+    number = 1;
+    sscanf(argv[3], "%d", &val);
+  } else if (argc == 4 && !strcasecmp(argv[2], "in_type")) {
+    addr = EE_IN_TYPE;
+    number = 1;
+    sscanf(argv[3], "%d", &val);
+  } else if (argc == 4 && !strcasecmp(argv[2], "in_count")) {
+    addr = EE_IN_COUNT;
+    number = 1;
+    sscanf(argv[3], "%d", &val);
+  } else if (argc == 4 && !strcasecmp(argv[2], "out_type")) {
+    addr = EE_OUT_TYPE;
+    number = 1;
+    sscanf(argv[3], "%d", &val);
+  } else if (argc == 4 && !strcasecmp(argv[2], "out_count")) {
+    addr = EE_OUT_COUNT;
+    number = 1;
+    sscanf(argv[3], "%d", &val);
+  } else if (argc == 5 && !strcasecmp(argv[2], "test_wave")) {
+    addr = EE_TEST_WAVE;
+    number = strtoul(argv[3], NULL, 0);
+    if (number == 0 || number > 8) {
+      PRINT("Invalid index\r\n");
+      return 1;
+    }
+    if (!strcasecmp(argv[4], "none")) {
+      val = 0xFFFFFFFF;
+    } else {
+      sscanf(argv[4], "%d", &val);
+    }
+  } else if (argc == 5 && !strcasecmp(argv[2], "in_wave")) {
+    addr = EE_IN_WAVE;
+    number = strtoul(argv[3], NULL, 0);
+    if (number == 0 || number > 8) {
+      PRINT("Invalid index\r\n");
+      return 1;
+    }
+    if (!strcasecmp(argv[4], "none")) {
+      val = 0xFFFFFFFF;
+    } else {
+      sscanf(argv[4], "%d", &val);
+    }
+  } else if (argc == 5 && !strcasecmp(argv[2], "test0_out")) {
+    addr = EE_TEST0_OUT_IL;
+    number = strtoul(argv[3], NULL, 0);
+    if (number == 0 || number > 64) {
+      PRINT("Invalid index\r\n");
+      return 1;
+    }
+    if (!strcasecmp(argv[4], "none")) {
+      val = 0xFFFFFFFF;
+    } else {
+      sscanf(argv[4], "%lf", &d_val);
+      val = d_val * 1000;
+    }
+  } else if (argc == 5 && !strcasecmp(argv[2], "test1_out")) {
+    addr = EE_TEST1_OUT_IL;
+    number = strtoul(argv[3], NULL, 0);
+    if (number == 0 || number > 64) {
+      PRINT("Invalid index\r\n");
+      return 1;
+    }
+    if (!strcasecmp(argv[4], "none")) {
+      val = 0xFFFFFFFF;
+    } else {
+      sscanf(argv[4], "%lf", &d_val);
+      val = d_val * 1000;
+    }
+  } else if (argc == 5 && !strcasecmp(argv[2], "in_out")) {
+    addr = EE_IN_OUT_IL;
+    number = strtoul(argv[3], NULL, 0);
+    if (number == 0 || number > 64) {
+      PRINT("Invalid index\r\n");
+      return 1;
+    }
+    if (!strcasecmp(argv[4], "none")) {
+      val = 0xFFFFFFFF;
+    } else {
+      sscanf(argv[4], "%lf", &d_val);
+      val = d_val * 1000;
+    }
+  } else {
+    cmd_help2(argv[0]);
+    return 0;
+  }
+  
+  addr = addr + (number - 1) * 4;
+  val = switch_endian(val);
+  if (I2cEepromWrite(EEPROM_ADDR, addr, (uint8_t*)&val, 4) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+
+  return 0;
+}
+
+int8_t debug_check_cali(void)
+{
+  uint32_t crc32;
+
+  if (I2cEepromRead(EEPROM_ADDR, EE_TEST0_OUT_IL, fw_buf, 4 * 64) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+  PRINT_HEX("First 16 data of TEST0_OUT", fw_buf, 16);
+  PRINT_HEX("Last 16 data of TEST0_OUT", fw_buf + 4 * 64 - 16, 16);
+  crc32 = Cal_CRC32(fw_buf, 4 * 64);
+  PRINT("TEST0_OUT CRC32 code : %#X\r\n\r\n", crc32);
+  crc32 = switch_endian(crc32);
+  if (I2cEepromWrite(EEPROM_ADDR, EE_TEST0_OUT_IL_CRC, (uint8_t*)&crc32, 4) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+
+  if (I2cEepromRead(EEPROM_ADDR, EE_TEST1_OUT_IL, fw_buf, 4 * 64) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+  PRINT_HEX("First 16 data of TEST1_OUT", fw_buf, 16);
+  PRINT_HEX("Last 16 data of TEST1_OUT", fw_buf + 4 * 64 - 16, 16);
+  crc32 = Cal_CRC32(fw_buf, 4 * 64);
+  PRINT("TEST1_OUT CRC32 code : %#X\r\n\r\n", crc32);
+  crc32 = switch_endian(crc32);
+  if (I2cEepromWrite(EEPROM_ADDR, EE_TEST1_OUT_IL_CRC, (uint8_t*)&crc32, 4) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+
+  if (I2cEepromRead(EEPROM_ADDR, EE_IN_OUT_IL, fw_buf, 4 * 64) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+  PRINT_HEX("First 16 data of IN_OUT", fw_buf, 16);
+  PRINT_HEX("Last 16 data of IN_OUT", fw_buf + 4 * 64 - 16, 16);
+  crc32 = Cal_CRC32(fw_buf, 4 * 64);
+  PRINT("IN_OUT CRC32 code : %#X\r\n\r\n", crc32);
+  crc32 = switch_endian(crc32);
+  if (I2cEepromWrite(EEPROM_ADDR, EE_IN_OUT_IL_CRC, (uint8_t*)&crc32, 4) != HAL_OK) {
+    PRINT("I2c failed, errCode = %#X\r\n", hi2c1.ErrorCode);
+  }
+
+  return 0;
+}
+
 int8_t debug_dump(uint8_t argc, char **argv)
 {
   uint32_t which, count;
   uint32_t i;
-  int8_t ret;
+  int8_t ret = 0;
   int32_t val_x, val_y;
+  uint16_t ee_offset;
+  double d_val;
 
   if (!strncasecmp(argv[2], "sw", 2)) {
     which = strtoul(argv[2] + 2, NULL, 10);
@@ -674,25 +895,69 @@ int8_t debug_dump(uint8_t argc, char **argv)
     }
     if (which == 1) count = 6;
     else count = 15;
+  } else if (!strcasecmp(argv[2], "type_count")) {
+    which = 11;
+    count = 6;
+    ee_offset = EE_TEST_TYPE;
+  } else if (!strcasecmp(argv[2], "test_wave")) {
+    which = 11;
+    count = 8;
+    ee_offset = EE_TEST_WAVE;
+  } else if (!strcasecmp(argv[2], "in_wave")) {
+    which = 11;
+    count = 8;
+    ee_offset = EE_IN_WAVE;
+  } else if (!strcasecmp(argv[2], "test0_out")) {
+    which = 12;
+    count = 64;
+    ee_offset = EE_TEST0_OUT_IL;
+  } else if (!strcasecmp(argv[2], "test1_out")) {
+    which = 12;
+    count = 64;
+    ee_offset = EE_TEST1_OUT_IL;
+  } else if (!strcasecmp(argv[2], "in_out")) {
+    which = 12;
+    count = 64;
+    ee_offset = EE_IN_OUT_IL;
   } else {
     cmd_help2(argv[0]);
     return 0;
   }
 
-  BE32_To_Buffer(0x5A5AA5A5, txBuf);
-  BE32_To_Buffer(CMD_DEBUG_DUMP, txBuf + 4);
-  BE32_To_Buffer(which, txBuf + 8);
-  ret = process_command(CMD_FOR_DEBUG, txBuf, 12, rBuf, &rLen);
-  if (ret) {
-    return ret;
-  }
-  
   if (which < 8) {
+    BE32_To_Buffer(0x5A5AA5A5, txBuf);
+    BE32_To_Buffer(CMD_DEBUG_DUMP, txBuf + 4);
+    BE32_To_Buffer(which, txBuf + 8);
+    ret = process_command(CMD_FOR_DEBUG, txBuf, 12, rBuf, &rLen);
+    if (ret) {
+      return ret;
+    }
     PRINT("Switch:\r\n");
     for (i = 0; i < count; ++i) {
       val_x = (int32_t)Buffer_To_BE32(&rBuf[CMD_SEQ_MSG_DATA + i * 8]);
       val_y = (int32_t)Buffer_To_BE32(&rBuf[CMD_SEQ_MSG_DATA + i * 8 + 4]);
       PRINT("%u,%d,%d\r\n", i + 1, val_x, val_y);
+    }
+  } else if (which == 11) {
+    I2cEepromRead(EEPROM_ADDR, ee_offset, fw_buf, 4 * count);
+    for (i = 0; i < count; ++i) {
+      val_y = (int32_t)Buffer_To_BE32(&fw_buf[i * 4]);
+      if (val_y == 0xFFFFFFFF) {
+        PRINT("%u,none\r\n", i + 1);
+      } else {
+        PRINT("%u,%d\r\n", i + 1, val_y);
+      }
+    }
+  } else if (which == 12) {
+    I2cEepromRead(EEPROM_ADDR, ee_offset, fw_buf, 4 * count);
+    for (i = 0; i < count; ++i) {
+      val_y = (int32_t)Buffer_To_BE32(&fw_buf[i * 4]);
+      if (val_y == 0xFFFFFFFF) {
+        PRINT("%u,none\r\n", i + 1);
+      } else {
+        d_val = (double)val_y / 1000;
+        PRINT("%u,%.3lf\r\n", i + 1, d_val);
+      }
     }
   }
 
@@ -918,20 +1183,6 @@ int8_t debug_get_inter_exp()
   return ret;
 }
 
-int8_t debug_unlock(void)
-{
-  int8_t ret;
-
-  BE32_To_Buffer(0x5A5AA5A5, txBuf);
-  BE32_To_Buffer(CMD_DEBUG_UNLOCK, txBuf + 4);
-  ret = process_command(CMD_FOR_DEBUG, txBuf, 8, rBuf, &rLen);
-   if (ret) {
-    return ret;
-  }
-
-  return ret;
-}
-
 int8_t process_command(uint32_t cmd, uint8_t *pdata, uint32_t len, uint8_t *rx_buf, uint32_t *rx_len)
 {
   uint32_t cmd_len = 0, print_len;
@@ -1128,7 +1379,7 @@ void PRINT_HEX(char *head, uint8_t *pdata, uint32_t len)
 {
   uint32_t i;
   
-  PRINT("************* PRINT HEX *************\r\n");
+  PRINT("\r\n************* PRINT HEX *************\r\n");
   PRINT("%s:\r\n", head);
   for (i = 0; i < len; ++i) {
     if (i % 0x10 == 0) {
@@ -1140,21 +1391,37 @@ void PRINT_HEX(char *head, uint8_t *pdata, uint32_t len)
   PRINT("************* PRINT END *************\r\n");
 }
 
+void PRINT_DATA_USE_CSV(char *head, uint8_t *pdata, uint32_t len)
+{
+  uint32_t i;
+  
+  PRINT("\r\n************* PRINT DATA *************\r\n");
+  PRINT("%s:\r\n", head);
+  for (i = 0; i < len; ++i) {
+    PRINT("%u,%#X,", i, i);
+    PRINT("%u,%#X\r\n", pdata[i], pdata[i]);
+    if (i % 0x10 == 0) {
+      HAL_Delay(50);
+    }
+  }
+  PRINT("************* PRINT END **************\r\n");
+}
+
 void PRINT_CHAR(char *head, uint8_t *pdata, uint32_t len)
 {
   uint32_t i;
   
-  PRINT("************* PRINT CHAR *************\r\n");
+  PRINT("\r\n************* PRINT CHAR *************\r\n");
   PRINT("%s:\r\n", head);
   for (i = 0; i < len; ++i) {
     if (i % 0x40 == 0) {
       HAL_Delay(10);
       PRINT("%08X : ", i / 0x40);
     }
-    PRINT("%c%s", pdata[i] == '\n' ? 'N' : pdata[i] == '\r' ? 'R' : pdata[i],\
+    PRINT("%c%s", pdata[i] == '\n' ? 'N' : pdata[i] == '\r' ? 'R' : pdata[i] == 0xFF ? 'F' : pdata[i],\
           (i + 1) % 0x40 == 0 ? "\r\n" : i == len - 1 ? "\r\n" : "");
   }
-  PRINT("************* PRINT CHAR *************\r\n");
+  PRINT("************* PRINT END **************\r\n");
 }
 
 uint32_t switch_endian(uint32_t i)
@@ -1204,5 +1471,18 @@ HAL_StatusTypeDef I2cEepromWrite(int16_t dev_addr, uint16_t mem_addr, uint8_t *b
 
 HAL_StatusTypeDef I2cEepromRead(int16_t dev_addr, uint16_t mem_addr, uint8_t *buf, int32_t length)
 {
-  return HAL_I2C_Mem_Read(&hi2c1, dev_addr, mem_addr, I2C_MEMADD_SIZE_16BIT, buf, length, 100);
+  uint32_t read = 0, every_read_limit = 128, every_read_count;
+  HAL_StatusTypeDef ret;
+
+  while (read < length) {
+    every_read_count = read + every_read_limit < length ? every_read_limit : length;
+    if ((ret = HAL_I2C_Mem_Read(&hi2c1, dev_addr, mem_addr + read,\
+          I2C_MEMADD_SIZE_16BIT, buf + read, every_read_count, 1000)) != HAL_OK) {
+      return ret;
+    }
+    read += every_read_count;
+    HAL_Delay(10);
+  }
+  
+  return HAL_OK;
 }

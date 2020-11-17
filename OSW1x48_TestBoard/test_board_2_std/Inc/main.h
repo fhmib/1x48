@@ -57,8 +57,8 @@ extern uint8_t print_trans_data;
 /* USER CODE BEGIN EM */
 #define TRANS_MAX_LENGTH            1200
 
-#define EEPROM_ADDR                 (0x50 << 1)
-#define TEMP_ADDR                   (0x4A << 1)
+#define EEPROM_ADDR                 (0x51 << 1)
+//#define TEMP_ADDR                   (0x4A << 1)
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
