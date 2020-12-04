@@ -17,7 +17,7 @@ UpgradeStruct up_state;
 
 char *pn = "45070039";
 char *hw_version = "01.01"; // 5 bytes
-char *fw_version = "00.02"; // 5 bytes
+char *fw_version = "01.01"; // 5 bytes
 char supplier_id[5];
 
 extern UpgradeFlashState upgrade_status;

@@ -13,6 +13,7 @@
 "osw1x48\iwdg.o"
 "osw1x48\rtc.o"
 "osw1x48\spi.o"
+"osw1x48\tim.o"
 "osw1x48\usart.o"
 "osw1x48\stm32f4xx_it.o"
 "osw1x48\stm32f4xx_hal_msp.o"

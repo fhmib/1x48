@@ -30,6 +30,7 @@
 #include "iwdg.h"
 #include "flash_if.h"
 #include "functions.h"
+#include "tim.h"
 
 /* USER CODE END Includes */
 
@@ -52,6 +53,7 @@
 /* USER CODE BEGIN Variables */
 osSemaphoreId_t uartProcessSemaphore;
 osSemaphoreId_t cmdProcessSemaphore;
+osSemaphoreId_t switchSemaphore;
 
 osMessageQueueId_t mid_ISR;                // message queue id
 
@@ -142,6 +144,11 @@ void MX_FREERTOS_Init(void) {
 
   cmdProcessSemaphore = osSemaphoreNew(1U, 0U, NULL);
   if (cmdProcessSemaphore == NULL) {
+    Set_Flag(&run_status.internal_exp, INT_EXP_INIT);
+  }
+  
+  switchSemaphore = osSemaphoreNew(1U, 0U, NULL);
+  if (switchSemaphore == NULL) {
     Set_Flag(&run_status.internal_exp, INT_EXP_INIT);
   }
 
@@ -433,7 +440,7 @@ void isrTask(void *argument)
 
       run_status.switch_channel = switch_channel;
       Set_Switch_Signal();
-      osDelay(pdMS_TO_TICKS(4));
+      osDelay(pdMS_TO_TICKS(1));
 
 #if 0
       // Check
@@ -448,6 +455,31 @@ void isrTask(void *argument)
 #endif
 
       Set_Switch_Ready();
+    } else if (msg.type == MSG_TYPE_SWITCH_DAC_ISR) {
+      if (sw_tim_control.cur_x < sw_tim_control.dst_x) {
+        sw_tim_control.cur_x = (sw_tim_control.dst_x - sw_tim_control.cur_x > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_x + sw_tim_control.step) : (sw_tim_control.dst_x);
+      } else if (sw_tim_control.cur_x > sw_tim_control.dst_x) {
+        sw_tim_control.cur_x = (sw_tim_control.cur_x - sw_tim_control.dst_x > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_x - sw_tim_control.step) : (sw_tim_control.dst_x);
+      }
+      
+      if (sw_tim_control.cur_y < sw_tim_control.dst_y) {
+        sw_tim_control.cur_y = (sw_tim_control.dst_y - sw_tim_control.cur_y > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_y + sw_tim_control.step) : (sw_tim_control.dst_y);
+      } else if (sw_tim_control.cur_y > sw_tim_control.dst_y) {
+        sw_tim_control.cur_y = (sw_tim_control.cur_y - sw_tim_control.dst_y > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_y - sw_tim_control.step) : (sw_tim_control.dst_y);
+      }
+
+      set_sw_dac_2(sw_tim_control.sw_num, sw_tim_control.cur_x, sw_tim_control.cur_y);
+
+      if (sw_tim_control.cur_x == sw_tim_control.dst_x && sw_tim_control.cur_y == sw_tim_control.dst_y) {
+        // HAL_TIM_Base_Stop_IT(&htim6);
+        osSemaphoreRelease(switchSemaphore);
+      } else {
+        HAL_TIM_Base_Start_IT(&htim6);
+      }
     }
   }
 }

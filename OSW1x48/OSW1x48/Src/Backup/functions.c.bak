@@ -103,7 +103,7 @@ int8_t Set_Switch(uint32_t switch_channel)
   }
 
   first_switch = SWITCH_NUM_1;
-  second_switch = channel_map[pre_index].second_switch;
+  second_switch = channel_map[index].second_switch;
 
   // TODO: Disable previous switch channel
   if (run_status.switch_channel != 0) {
@@ -174,7 +174,7 @@ void Reset_Switch(void)
 {
   uint32_t index;
 
-  if (run_status.maigc == RUN_MAGIC && run_status.switch_channel != 0) {
+  if (run_status.maigc == RUN_MAGIC && run_status.switch_channel != 0 && run_status.switch_channel < 49) {
     index = Get_Index_Of_Channel_Map(run_status.switch_channel);
     Clear_Switch_Dac(channel_map[index].second_switch);
     Clear_Switch_Dac(SWITCH_NUM_1);
@@ -186,7 +186,7 @@ void Reset_Switch(void)
   }
 
   run_status.switch_channel = 0;
-  Clear_Switch_Ready();
+  //Clear_Switch_Ready();
 }
 
 int8_t Get_Switch_Adc(uint32_t switch_id, uint16_t *px, uint16_t *nx, uint16_t *py, uint16_t *ny)
@@ -319,6 +319,18 @@ int32_t Get_Index_Of_Channel_Map(uint32_t switch_channel)
   return i;
 }
 
+void Set_Switch_Signal(void)
+{
+  HAL_GPIO_WritePin(SW_S0_GPIO_Port, SW_S0_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 0) & 0x1));
+  HAL_GPIO_WritePin(SW_S1_GPIO_Port, SW_S1_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 1) & 0x1));
+  HAL_GPIO_WritePin(SW_S2_GPIO_Port, SW_S2_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 2) & 0x1));
+  HAL_GPIO_WritePin(SW_S3_GPIO_Port, SW_S3_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 3) & 0x1));
+  HAL_GPIO_WritePin(SW_S4_GPIO_Port, SW_S4_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 4) & 0x1));
+  HAL_GPIO_WritePin(SW_S5_GPIO_Port, SW_S5_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 5) & 0x1));
+  HAL_GPIO_WritePin(SW_S6_GPIO_Port, SW_S6_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 6) & 0x1));
+}
+
+
 inline void Set_Switch_Ready(void)
 {
   HAL_GPIO_WritePin(SW_READY_GPIO_Port, SW_READY_Pin, GPIO_PIN_RESET);
@@ -335,10 +347,11 @@ inline void Clear_Switch_Ready(void)
   HAL_GPIO_WritePin(LATCH_GPIO_Port, LATCH_Pin, GPIO_PIN_RESET);
 }
 
+
 void Init_Run_Status(void)
 {
   run_status.maigc = RUN_MAGIC;
-  run_status.switch_channel = 0;
+  run_status.switch_channel = 49;
 }
 
 void Set_Flag(uint32_t *status, uint32_t bit_addr)

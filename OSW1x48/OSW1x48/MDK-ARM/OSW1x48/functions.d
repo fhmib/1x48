@@ -65,3 +65,4 @@ osw1x48\functions.o: ../Inc/iwdg.h
 osw1x48\functions.o: ../Inc/i2c.h
 osw1x48\functions.o: ../Inc/spi.h
 osw1x48\functions.o: ../Inc/rtc.h
+osw1x48\functions.o: ../Inc/tim.h

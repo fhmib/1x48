@@ -13,6 +13,7 @@ typedef enum {
   MSG_TYPE_LOG,
   MSG_TYPE_FLASH_ISR,
   MSG_TYPE_SWITCH_ISR,
+  MSG_TYPE_SWITCH_DAC_ISR,
 } MsgType;
 
 // For Log File
@@ -99,6 +100,17 @@ typedef struct {
   uint32_t internal_exp;
 } RunTimeStatus;
 
+typedef struct {
+  uint32_t counter;
+  uint32_t time; // Unit: 100us
+  int32_t step;
+  uint8_t sw_num;
+  int32_t dst_x;
+  int32_t dst_y;
+  int32_t cur_x;
+  int32_t cur_y;
+} SwTimControl;
+
 void Throw_Log(uint8_t *buf, uint32_t length);
 uint32_t Log_Write(uint32_t addr, uint8_t *pbuf, uint32_t length);
 uint32_t Log_Write_byte(uint32_t addr, uint8_t ch, uint32_t length);
@@ -134,6 +146,7 @@ double Cal_Temp(uint16_t adc);
 
 uint32_t debug_sw_dac(uint8_t sw_num, int32_t val_x, int32_t val_y);
 int8_t set_sw_dac(uint8_t sw_num, int32_t val_x, int32_t val_y);
+void set_sw_dac_2(uint8_t sw_num, int32_t val_x, int32_t val_y);
 uint32_t debug_sw_adc(uint8_t sw_num);
 uint32_t debug_vol_adc(uint8_t chan);
 uint32_t debug_pin(uint8_t pin, uint8_t val);

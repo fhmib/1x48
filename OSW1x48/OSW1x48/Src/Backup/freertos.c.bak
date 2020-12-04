@@ -432,8 +432,10 @@ void isrTask(void *argument)
       }
 
       run_status.switch_channel = switch_channel;
+      Set_Switch_Signal();
       osDelay(pdMS_TO_TICKS(4));
 
+#if 0
       // Check
       if (Get_Current_Switch_Channel() != switch_channel) {
         Reset_Switch();
@@ -443,12 +445,9 @@ void isrTask(void *argument)
         }
         continue;
       }
+#endif
 
       Set_Switch_Ready();
-      if (Is_Flag_Set(&run_status.internal_exp, EXP_SWITCH)) {
-        THROW_LOG("Switch back to normal\n");
-        Clear_Flag(&run_status.internal_exp, EXP_SWITCH);
-      }
     }
   }
 }

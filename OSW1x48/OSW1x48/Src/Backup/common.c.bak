@@ -316,7 +316,14 @@ osStatus_t Cali_Write(uint16_t mem_addr, uint8_t *buf, int32_t length)
 
 osStatus_t Cali_Read(uint16_t mem_addr, uint8_t *buf, int32_t length)
 {
-  memcpy(buf, (void*)(CALI_ADDRESS + mem_addr), length);
+  uint32_t val, cplt_bytes = 0;
+
+  while (cplt_bytes < length) {
+    get_32_from_cali_area(mem_addr + cplt_bytes, &val);
+    BE32_To_Buffer(val, buf + cplt_bytes);
+    cplt_bytes += 4;
+  }
+  // memcpy(buf, (void*)(CALI_ADDRESS + mem_addr), length);
   return osOK;
 }
 

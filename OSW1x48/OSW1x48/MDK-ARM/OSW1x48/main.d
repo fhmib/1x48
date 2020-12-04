@@ -64,4 +64,5 @@ osw1x48\main.o: ../Inc/i2c.h
 osw1x48\main.o: ../Inc/iwdg.h
 osw1x48\main.o: ../Inc/rtc.h
 osw1x48\main.o: ../Inc/spi.h
+osw1x48\main.o: ../Inc/tim.h
 osw1x48\main.o: ../Inc/gpio.h

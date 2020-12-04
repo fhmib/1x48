@@ -9,6 +9,7 @@
 #include "i2c.h"
 #include "spi.h"
 #include "rtc.h"
+#include "tim.h"
 
 ChannelSwitchMapStruct channel_map[] = {
   { 1, 15, SWITCH_NUM_2,         EE_CAL_SWITCH2},
@@ -30,6 +31,7 @@ SwitchDacMapStruct switch_map[] = {
   {VIRTUAL_SWITCH_NUM_7,                    NULL,   /*DAC channel*/  1,  2,  3,  4, /*ADC channel*/ 24, 25, 26, 27}
 };
 
+extern osSemaphoreId_t switchSemaphore;
 extern UpgradeFlashState upgrade_status;
 extern RespondStu resp_buf;
 
@@ -88,8 +90,12 @@ int8_t Set_Switch(uint32_t switch_channel)
   int32_t pre_index, index;
   uint8_t first_switch, second_switch;
   uint16_t addr;
-  int val_x, val_y;
+  int32_t val_x, val_y;
   osStatus_t status;
+  
+  int32_t old_x, old_y;
+  int32_t tmp_x, tmp_y;
+  int32_t safe_dist = 1000;
 
   if (switch_channel == 49) {
     Reset_Switch();
@@ -106,6 +112,7 @@ int8_t Set_Switch(uint32_t switch_channel)
   second_switch = channel_map[index].second_switch;
 
   // TODO: Disable previous switch channel
+#if 0
   if (run_status.switch_channel != 0) {
     Clear_Switch_Dac(first_switch);
     pre_index = Get_Index_Of_Channel_Map(run_status.switch_channel);
@@ -113,6 +120,15 @@ int8_t Set_Switch(uint32_t switch_channel)
       Clear_Switch_Dac(channel_map[pre_index].second_switch);
     }
   }
+#else
+  if (run_status.switch_channel != 0) {
+    pre_index = Get_Index_Of_Channel_Map(run_status.switch_channel);
+    Clear_Switch_Dac(channel_map[pre_index].second_switch);
+    Clear_Switch_Dac(first_switch);
+  }
+  old_x = 0;
+  old_y = 0;
+#endif
 
   // Configure new switch channel
   // second level
@@ -133,6 +149,7 @@ int8_t Set_Switch(uint32_t switch_channel)
       EPT("Write DAC faliled\n");
       return -4;
     }
+    osDelay(pdMS_TO_TICKS(2));
   }
 
   // first level
@@ -147,12 +164,54 @@ int8_t Set_Switch(uint32_t switch_channel)
     EPT("Get val_y failed 2. status = %d\n", status);
     return -6;
   }
-
+#if 0
   if (set_sw_dac(first_switch, val_x, val_y)) {
     EPT("Write DAC faliled\n");
     return -7;
   }
+#else
+  if (val_x - old_x >= 0 && val_y - old_y >= 0) {
+    // third quadrant
+    tmp_x = (val_x - old_x >= safe_dist) ? (val_x - safe_dist) : (old_x);
+    tmp_y = (val_y - old_y >= safe_dist) ? (val_y - safe_dist) : (old_y);
+  } else if (val_x - old_x <= 0 && val_y - old_y >= 0) {
+    // fourth quadrant
+    tmp_x = (old_x - val_x >= safe_dist) ? (val_x + safe_dist) : (old_x);
+    tmp_y = (val_y - old_y >= safe_dist) ? (val_y - safe_dist) : (old_y);
+  } else if (val_x - old_x <= 0 && val_y - old_y <= 0) {
+    // first quadrant
+    tmp_x = (old_x - val_x >= safe_dist) ? (val_x + safe_dist) : (old_x);
+    tmp_y = (old_y - val_y >= safe_dist) ? (val_y + safe_dist) : (old_y);
+  } else if (val_x - old_x >= 0 && val_y - old_y <= 0) {
+    // second quadrant
+    tmp_x = (val_x - old_x >= safe_dist) ? (val_x - safe_dist) : (old_x);
+    tmp_y = (old_y - val_y >= safe_dist) ? (val_y + safe_dist) : (old_y);
+  }
 
+
+  if (set_sw_dac(first_switch, tmp_x, tmp_y)) {
+    EPT("Write DAC faliled\n");
+    return -7;
+  }
+    
+  sw_tim_control.time = 3;
+  sw_tim_control.step = 20;
+  sw_tim_control.counter = 0;
+  sw_tim_control.sw_num = first_switch;
+  sw_tim_control.cur_x = tmp_x;
+  sw_tim_control.cur_y = tmp_y;
+  sw_tim_control.dst_x = val_x;
+  sw_tim_control.dst_y = val_y;
+
+  HAL_IWDG_Refresh(&hiwdg);
+  HAL_TIM_Base_Start_IT(&htim6);
+
+  status = osSemaphoreAcquire(switchSemaphore, 30);
+  if (status != osOK) {
+    THROW_LOG("Set Switch Timeout!\n");
+  }
+  osDelay(1);
+#endif
   return 0;
 }
 
@@ -328,6 +387,9 @@ void Set_Switch_Signal(void)
   HAL_GPIO_WritePin(SW_S4_GPIO_Port, SW_S4_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 4) & 0x1));
   HAL_GPIO_WritePin(SW_S5_GPIO_Port, SW_S5_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 5) & 0x1));
   HAL_GPIO_WritePin(SW_S6_GPIO_Port, SW_S6_Pin, (GPIO_PinState)(((run_status.switch_channel - 1) >> 6) & 0x1));
+  HAL_GPIO_WritePin(LATCH_GPIO_Port, LATCH_Pin, GPIO_PIN_SET);
+  osDelay(pdMS_TO_TICKS(1));
+  HAL_GPIO_WritePin(LATCH_GPIO_Port, LATCH_Pin, GPIO_PIN_RESET);
 }
 
 
@@ -440,11 +502,54 @@ int8_t set_sw_dac(uint8_t sw_num, int32_t val_x, int32_t val_y)
         return -1;
       }
       // DAC need 2ms at least
-      osDelay(pdMS_TO_TICKS(4));
+      osDelay(pdMS_TO_TICKS(2));
     }
   }
   
   return 0;
+}
+
+void set_sw_dac_2(uint8_t sw_num, int32_t val_x, int32_t val_y)
+{
+  uint32_t i;
+  uint16_t dac_px_val, dac_nx_val, dac_py_val, dac_ny_val;
+  dac_write_func *dac_write_f = NULL;
+
+  if (sw_num > SWITCH_NUM_4 || sw_num == 0) {
+    return;
+  }
+
+  for (i = 0; i < sizeof(switch_map)/sizeof(switch_map[0]); ++i) {
+    if (switch_map[i].sw_num == sw_num) {
+      dac_write_f = switch_map[i].func;
+      // x
+      if (val_x >= 0) {
+        dac_px_val = (uint16_t)val_x;
+        dac_nx_val = 0;
+      } else {
+        dac_px_val = 0;
+        dac_nx_val = (uint16_t)my_abs(val_x);
+      }
+      // y
+      if (val_y >= 0) {
+        dac_py_val = (uint16_t)val_y;
+        dac_ny_val = 0;
+      } else {
+        dac_py_val = 0;
+        dac_ny_val = (uint16_t)my_abs(val_y);
+      }
+      break;
+    }
+  }
+  // write dac
+  if (dac_write_f) {
+    dac_write_f(switch_map[i].px_chan, dac_px_val);
+    dac_write_f(switch_map[i].nx_chan, dac_nx_val);
+    dac_write_f(switch_map[i].py_chan, dac_py_val);
+    dac_write_f(switch_map[i].ny_chan, dac_ny_val);
+  }
+  
+  return;
 }
 
 uint32_t debug_sw_adc(uint8_t sw_num)

@@ -61,3 +61,4 @@ osw1x48\freertos.o: ../Inc/functions.h
 osw1x48\freertos.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
 osw1x48\freertos.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
 osw1x48\freertos.o: ../Inc/iwdg.h
+osw1x48\freertos.o: ../Inc/tim.h

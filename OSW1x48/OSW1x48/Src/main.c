@@ -27,6 +27,7 @@
 #include "iwdg.h"
 #include "rtc.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -60,6 +61,10 @@ RunTimeStatus run_status __attribute__((at(0x2002FC00)));
 uint8_t upgrade_bootloader = 0;
 uint8_t reserve_empty = 0;
 uint8_t lock_debug = 0;
+
+SwTimControl sw_tim_control;
+extern osSemaphoreId_t switchSemaphore;
+MsgStruct tim_isr_msg;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,6 +121,7 @@ int main(void)
   MX_RTC_Init();
   MX_SPI2_Init();
   MX_SPI6_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
@@ -351,7 +357,43 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+  if (htim->Instance == TIM6) {
+    if (++sw_tim_control.counter < sw_tim_control.time) {
+    } else {
+      HAL_TIM_Base_Stop_IT(&htim6);
+#if 0
+      if (sw_tim_control.cur_x < sw_tim_control.dst_x) {
+        sw_tim_control.cur_x = (sw_tim_control.dst_x - sw_tim_control.cur_x > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_x + sw_tim_control.step) : (sw_tim_control.dst_x);
+      } else if (sw_tim_control.cur_x > sw_tim_control.dst_x) {
+        sw_tim_control.cur_x = (sw_tim_control.cur_x - sw_tim_control.dst_x > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_x - sw_tim_control.step) : (sw_tim_control.dst_x);
+      }
+      
+      if (sw_tim_control.cur_y < sw_tim_control.dst_y) {
+        sw_tim_control.cur_y = (sw_tim_control.dst_y - sw_tim_control.cur_y > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_y + sw_tim_control.step) : (sw_tim_control.dst_y);
+      } else if (sw_tim_control.cur_y > sw_tim_control.dst_y) {
+        sw_tim_control.cur_y = (sw_tim_control.cur_y - sw_tim_control.dst_y > sw_tim_control.step) ?\
+                                (sw_tim_control.cur_y - sw_tim_control.step) : (sw_tim_control.dst_y);
+      }
 
+      set_sw_dac_2(sw_tim_control.sw_num, sw_tim_control.cur_x, sw_tim_control.cur_y);
+      sw_tim_control.counter = 0;
+
+      if (sw_tim_control.cur_x == sw_tim_control.dst_x && sw_tim_control.cur_y == sw_tim_control.dst_y) {
+        // HAL_TIM_Base_Stop_IT(&htim6);
+        osSemaphoreRelease(switchSemaphore);
+      } else {
+        HAL_TIM_Base_Start_IT(&htim6);
+      }
+#else
+      tim_isr_msg.type = MSG_TYPE_SWITCH_DAC_ISR;
+      osMessageQueuePut(mid_ISR, &tim_isr_msg, 0U, 0U);
+      sw_tim_control.counter = 0;
+#endif
+    }
+  }
   /* USER CODE END Callback 1 */
 }
 

@@ -119,6 +119,7 @@ void Reset_Switch(void);
 int8_t Get_Switch_Adc(uint32_t switch_id, uint16_t *px, uint16_t *nx, uint16_t *py, uint16_t *ny);
 int32_t Get_Current_Switch_Channel(void);
 int32_t Get_Index_Of_Channel_Map(uint32_t switch_channel);
+void Set_Switch_Signal(void);
 
 void Set_Alarm(void);
 void Clear_Alarm(void);
