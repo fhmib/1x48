@@ -95,7 +95,7 @@ int8_t Set_Switch(uint32_t switch_channel)
   
   int32_t old_x, old_y;
   int32_t tmp_x, tmp_y;
-  int32_t safe_dist = 1000;
+  int32_t safe_dist = 250;
 
   if (switch_channel == 49) {
     Reset_Switch();
@@ -195,7 +195,7 @@ int8_t Set_Switch(uint32_t switch_channel)
   }
     
   sw_tim_control.time = 3;
-  sw_tim_control.step = 20;
+  sw_tim_control.step = 5;
   sw_tim_control.counter = 0;
   sw_tim_control.sw_num = first_switch;
   sw_tim_control.cur_x = tmp_x;

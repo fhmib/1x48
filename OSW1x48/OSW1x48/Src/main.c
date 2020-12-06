@@ -304,6 +304,7 @@ void OSW_Init(void)
 
 extern FLASH_ProcessTypeDef pFlash;
 extern osMessageQueueId_t mid_ISR;
+extern osMessageQueueId_t mid_SwISR;
 extern osSemaphoreId_t logEraseSemaphore;
 void HAL_FLASH_EndOfOperationCallback(uint32_t ReturnValue)
 {
@@ -361,37 +362,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (++sw_tim_control.counter < sw_tim_control.time) {
     } else {
       HAL_TIM_Base_Stop_IT(&htim6);
-#if 0
-      if (sw_tim_control.cur_x < sw_tim_control.dst_x) {
-        sw_tim_control.cur_x = (sw_tim_control.dst_x - sw_tim_control.cur_x > sw_tim_control.step) ?\
-                                (sw_tim_control.cur_x + sw_tim_control.step) : (sw_tim_control.dst_x);
-      } else if (sw_tim_control.cur_x > sw_tim_control.dst_x) {
-        sw_tim_control.cur_x = (sw_tim_control.cur_x - sw_tim_control.dst_x > sw_tim_control.step) ?\
-                                (sw_tim_control.cur_x - sw_tim_control.step) : (sw_tim_control.dst_x);
-      }
-      
-      if (sw_tim_control.cur_y < sw_tim_control.dst_y) {
-        sw_tim_control.cur_y = (sw_tim_control.dst_y - sw_tim_control.cur_y > sw_tim_control.step) ?\
-                                (sw_tim_control.cur_y + sw_tim_control.step) : (sw_tim_control.dst_y);
-      } else if (sw_tim_control.cur_y > sw_tim_control.dst_y) {
-        sw_tim_control.cur_y = (sw_tim_control.cur_y - sw_tim_control.dst_y > sw_tim_control.step) ?\
-                                (sw_tim_control.cur_y - sw_tim_control.step) : (sw_tim_control.dst_y);
-      }
-
-      set_sw_dac_2(sw_tim_control.sw_num, sw_tim_control.cur_x, sw_tim_control.cur_y);
-      sw_tim_control.counter = 0;
-
-      if (sw_tim_control.cur_x == sw_tim_control.dst_x && sw_tim_control.cur_y == sw_tim_control.dst_y) {
-        // HAL_TIM_Base_Stop_IT(&htim6);
-        osSemaphoreRelease(switchSemaphore);
-      } else {
-        HAL_TIM_Base_Start_IT(&htim6);
-      }
-#else
       tim_isr_msg.type = MSG_TYPE_SWITCH_DAC_ISR;
-      osMessageQueuePut(mid_ISR, &tim_isr_msg, 0U, 0U);
+      osMessageQueuePut(mid_SwISR, &tim_isr_msg, 0U, 0U);
       sw_tim_control.counter = 0;
-#endif
     }
   }
   /* USER CODE END Callback 1 */

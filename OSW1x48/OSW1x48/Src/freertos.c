@@ -56,6 +56,7 @@ osSemaphoreId_t cmdProcessSemaphore;
 osSemaphoreId_t switchSemaphore;
 
 osMessageQueueId_t mid_ISR;                // message queue id
+osMessageQueueId_t mid_SwISR;                // message queue id
 
 osMutexId_t i2c1Mutex;
 osMutexId_t i2c2Mutex;
@@ -99,6 +100,13 @@ const osThreadAttr_t isrTask_attributes = {
   .stack_size = 1024
 };
 
+osThreadId_t swIsrTaskHandle;
+const osThreadAttr_t swIsrTask_attributes = {
+  .name = "swIsrTask",
+  .priority = (osPriority_t) INTERRUPT_TASK_PRIORITY,
+  .stack_size = 1024
+};
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -114,6 +122,7 @@ void uartProcessTask(void *argument);
 void cmdProcessTask(void *argument);
 void watchdogTask(void *argument);
 void isrTask(void *argument);
+void swIsrTask(void *argument);
 
 /* USER CODE END FunctionPrototypes */
 
@@ -154,6 +163,11 @@ void MX_FREERTOS_Init(void) {
 
   mid_ISR = osMessageQueueNew(ISR_QUEUE_LENGTH, sizeof(MsgStruct), NULL);
   if (mid_ISR == NULL) {
+    Set_Flag(&run_status.internal_exp, INT_EXP_INIT);
+  }
+
+  mid_SwISR = osMessageQueueNew(SW_ISR_QUEUE_LENGTH, sizeof(MsgStruct), NULL);
+  if (mid_SwISR == NULL) {
     Set_Flag(&run_status.internal_exp, INT_EXP_INIT);
   }
 
@@ -212,6 +226,7 @@ void MX_FREERTOS_Init(void) {
   cmdProcessTaskHandle = osThreadNew(cmdProcessTask, NULL, &cmdProcessTask_attributes);
   watchdogTaskHandle = osThreadNew(watchdogTask, NULL, &watchdogTask_attributes);
   isrTaskHandle = osThreadNew(isrTask, NULL, &isrTask_attributes);
+  swIsrTaskHandle = osThreadNew(swIsrTask, NULL, &swIsrTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -442,20 +457,23 @@ void isrTask(void *argument)
       Set_Switch_Signal();
       osDelay(pdMS_TO_TICKS(1));
 
-#if 0
-      // Check
-      if (Get_Current_Switch_Channel() != switch_channel) {
-        Reset_Switch();
-        if (!Is_Flag_Set(&run_status.internal_exp, EXP_SWITCH)) {
-          THROW_LOG("Switch abnormal\n");
-          Set_Flag(&run_status.internal_exp, EXP_SWITCH);
-        }
-        continue;
-      }
-#endif
-
       Set_Switch_Ready();
-    } else if (msg.type == MSG_TYPE_SWITCH_DAC_ISR) {
+    }
+  }
+}
+
+void swIsrTask(void *argument)
+{
+  osStatus_t status;
+  MsgStruct msg;
+
+  for (;;)
+  {
+    status = osMessageQueueGet(mid_SwISR, &msg, 0U, osWaitForever);
+    if (status != osOK)
+      continue;
+
+    if (msg.type == MSG_TYPE_SWITCH_DAC_ISR) {
       if (sw_tim_control.cur_x < sw_tim_control.dst_x) {
         sw_tim_control.cur_x = (sw_tim_control.dst_x - sw_tim_control.cur_x > sw_tim_control.step) ?\
                                 (sw_tim_control.cur_x + sw_tim_control.step) : (sw_tim_control.dst_x);

@@ -92,6 +92,7 @@ extern SwTimControl sw_tim_control;
 #define LOG_PACKET_LENGTH         1024
 
 #define ISR_QUEUE_LENGTH          6
+#define SW_ISR_QUEUE_LENGTH       2
 
 
 //#define EEPROM_ADDR               (0x50 << 1)
