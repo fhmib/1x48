@@ -421,6 +421,8 @@ void isrTask(void *argument)
   uint32_t switch_channel;
 
   OSW_Init();
+  
+  Set_Switch_Ready();
 
   for (;;)
   {
@@ -442,10 +444,14 @@ void isrTask(void *argument)
         THROW_LOG("Invalid switch chennel = %u [io]\n", switch_channel);
         continue;
       }
+      
+      if (switch_channel == run_status.switch_channel) {
+        continue;
+      }
 
       Clear_Switch_Ready();
       if (Set_Switch(switch_channel)) {
-        run_status.switch_channel = 0;
+        run_status.switch_channel = 49;
         if (!Is_Flag_Set(&run_status.internal_exp, EXP_SWITCH)) {
           THROW_LOG("Switch abnormal\n");
           Set_Flag(&run_status.internal_exp, EXP_SWITCH);

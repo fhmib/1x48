@@ -232,6 +232,8 @@ int8_t Clear_Switch_Dac(uint32_t switch_id)
 void Reset_Switch(void)
 {
   uint32_t index;
+  
+  Clear_Switch_Ready();
 
   if (run_status.maigc == RUN_MAGIC && run_status.switch_channel != 0 && run_status.switch_channel < 49) {
     index = Get_Index_Of_Channel_Map(run_status.switch_channel);
@@ -244,8 +246,8 @@ void Reset_Switch(void)
     Clear_Switch_Dac(SWITCH_NUM_4);
   }
 
-  run_status.switch_channel = 0;
-  //Clear_Switch_Ready();
+  run_status.switch_channel = 49;
+  Set_Switch_Ready();
 }
 
 int8_t Get_Switch_Adc(uint32_t switch_id, uint16_t *px, uint16_t *nx, uint16_t *py, uint16_t *ny)

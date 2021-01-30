@@ -408,8 +408,6 @@ int8_t cmd_for_debug(uint8_t argc, char **argv)
 {
   if (argc == 5 && !strcasecmp(argv[1], "dac")) {
     return debug_dac(argc, argv);
-  } else if (argc == 3 && !strcasecmp(argv[1], "adc")) {
-    return debug_adc(argc, argv);
   } else if (argc == 4 && !strcasecmp(argv[1], "pin")) {
     return debug_pin(argc, argv);
   } else if (argc == 3 && !strcasecmp(argv[1], "switch_io")) {

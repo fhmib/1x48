@@ -8,15 +8,20 @@ crt.Screen.Synchronous = True
 
 Sub Main
 	do
-		crt.Screen.Send chr(13) & "debug switch_io 31" & chr(13)
-		crt.Sleep 2000
+		crt.Screen.Send chr(13) & "debug switch_io 16" & chr(13)
+		crt.Sleep 1000
 		crt.Screen.Send "debug monitor" & chr(13)
-		crt.Screen.WaitForString "Channel Data = 31(0X1F)", 2
+		crt.Screen.WaitForString "Channel Data = 16(0X10)", 2
 
-		crt.Screen.Send chr(13) & "debug switch_io 32" & chr(13)
-		crt.Sleep 2000
+		crt.Screen.Send chr(13) & "debug switch_io 47" & chr(13)
+		crt.Sleep 1000
 		crt.Screen.Send "debug monitor" & chr(13)
-		crt.Screen.WaitForString "Channel Data = 32(0X20)", 2
+		crt.Screen.WaitForString "Channel Data = 47(0X2F)", 2
+
+		crt.Screen.Send chr(13) & "debug switch_io 47" & chr(13)
+		crt.Sleep 1000
+		crt.Screen.Send "debug monitor" & chr(13)
+		crt.Screen.WaitForString "Channel Data = 47(0X2F)", 2
 
 	loop
 End Sub

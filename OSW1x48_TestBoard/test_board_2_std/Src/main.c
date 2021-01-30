@@ -42,7 +42,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define VER "OSW1x48_testboard_1.0.2"
+#define VER "OSW1x48_testboard_1.0.3"
 #define CMD_LENGTH 256
 /* USER CODE END PD */
 
@@ -231,9 +231,6 @@ console_cmd cmdlist[] = {
   {"poweroff", cmd_power, "Command about power", "poweroff", "poweroff"},
   {"upgrade", cmd_upgrade, "Command about upgrade", "upgrade init [block_size] | file | install", "upgrade init [512] | file | install"},
   {"version", cmd_version, "Get version", "version", "version"},
-  {"temp", cmd_temp, "Get device temperature", "temp", "temp"},
-  {"voltage", cmd_voltage, "Get device voltage", "voltage get", "voltage get"},
-  {"date", cmd_time, "Set/Get module time", "date get | set y m d h m s", "date get | set 2020 7 29 15 55 50"},
   {"eeprom", cmd_eeprom, "write/read eeprom", "eeprom write <addr> <value> | read <addr> <len> | dump", "eeprom write 0x10 0x55 | eeprom read 0x10 16 | eeprom dump"},
   {"i2c", cmd_i2c, "write/read i2c", "i2c read <dev_addr> <count> | read <dev_addr> <mem_size> <mem_addr> <count>", "i2c read 0x48 2 | i2c read 0x48 1 0x0 2"},
   {"debug", cmd_for_debug, "Command for debug", "debug", "debug"},

@@ -339,7 +339,7 @@ osStatus_t RTOS_DAC5504_SPI1_Write(uint8_t mode, uint16_t val)
 {
   osStatus_t status;
   uint8_t txbuf[2];
-  
+
   if ((status = osMutexAcquire(spi1Mutex, I2C_WAIT_TIMEOUT)) != osOK) {
     THROW_LOG("Acquire mutex of spi1 failed\n");
     return status;
@@ -349,7 +349,7 @@ osStatus_t RTOS_DAC5504_SPI1_Write(uint8_t mode, uint16_t val)
   txbuf[1] = (uint8_t)(val & 0xFF);
 
   HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_RESET);
-  if (HAL_SPI_Transmit(&hspi1, txbuf, 2, 100) != HAL_OK) {
+  if (HAL_SPI_Transmit(&hspi1, txbuf, 2, 2) != HAL_OK) {
     status = osError;
   }
   HAL_GPIO_WritePin(SPI1_CS_GPIO_Port, SPI1_CS_Pin, GPIO_PIN_SET);
@@ -363,7 +363,7 @@ osStatus_t RTOS_DAC5504_SPI2_Write(uint8_t mode, uint16_t val)
 {
   osStatus_t status;
   uint8_t txbuf[2];
-  
+
   if ((status = osMutexAcquire(spi2Mutex, I2C_WAIT_TIMEOUT)) != osOK) {
     THROW_LOG("Acquire mutex of spi1 failed\n");
     return status;
@@ -373,7 +373,7 @@ osStatus_t RTOS_DAC5504_SPI2_Write(uint8_t mode, uint16_t val)
   txbuf[1] = (uint8_t)(val & 0xFF);
 
   HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_RESET);
-  if (HAL_SPI_Transmit(&hspi2, txbuf, 2, 100) != HAL_OK) {
+  if (HAL_SPI_Transmit(&hspi2, txbuf, 2, 2) != HAL_OK) {
     status = osError;
   }
   HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
@@ -387,7 +387,7 @@ osStatus_t RTOS_DAC5504_SPI5_Write(uint8_t mode, uint16_t val)
 {
   osStatus_t status;
   uint8_t txbuf[2];
-  
+
   if ((status = osMutexAcquire(spi5Mutex, I2C_WAIT_TIMEOUT)) != osOK) {
     THROW_LOG("Acquire mutex of spi1 failed\n");
     return status;
@@ -397,7 +397,7 @@ osStatus_t RTOS_DAC5504_SPI5_Write(uint8_t mode, uint16_t val)
   txbuf[1] = (uint8_t)(val & 0xFF);
 
   HAL_GPIO_WritePin(SPI5_CS_GPIO_Port, SPI5_CS_Pin, GPIO_PIN_RESET);
-  if (HAL_SPI_Transmit(&hspi5, txbuf, 2, 100) != HAL_OK) {
+  if (HAL_SPI_Transmit(&hspi5, txbuf, 2, 2) != HAL_OK) {
     status = osError;
   }
   HAL_GPIO_WritePin(SPI5_CS_GPIO_Port, SPI5_CS_Pin, GPIO_PIN_SET);
@@ -411,7 +411,7 @@ osStatus_t RTOS_DAC5504_SPI6_Write(uint8_t mode, uint16_t val)
 {
   osStatus_t status;
   uint8_t txbuf[2];
-  
+
   if ((status = osMutexAcquire(spi6Mutex, I2C_WAIT_TIMEOUT)) != osOK) {
     THROW_LOG("Acquire mutex of spi1 failed\n");
     return status;
@@ -421,7 +421,7 @@ osStatus_t RTOS_DAC5504_SPI6_Write(uint8_t mode, uint16_t val)
   txbuf[1] = (uint8_t)(val & 0xFF);
 
   HAL_GPIO_WritePin(SPI6_CS_GPIO_Port, SPI6_CS_Pin, GPIO_PIN_RESET);
-  if (HAL_SPI_Transmit(&hspi6, txbuf, 2, 100) != HAL_OK) {
+  if (HAL_SPI_Transmit(&hspi6, txbuf, 2, 2) != HAL_OK) {
     status = osError;
   }
   HAL_GPIO_WritePin(SPI6_CS_GPIO_Port, SPI6_CS_Pin, GPIO_PIN_SET);

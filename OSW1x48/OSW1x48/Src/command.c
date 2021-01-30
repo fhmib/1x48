@@ -16,8 +16,8 @@ RespondStu resp_buf;
 UpgradeStruct up_state;
 
 char *pn = "45070039";
-char *hw_version = "01.01"; // 5 bytes
-char *fw_version = "01.03"; // 5 bytes
+char *hw_version = "01.02"; // 5 bytes
+char *fw_version = "01.05"; // 5 bytes
 char supplier_id[5];
 
 extern UpgradeFlashState upgrade_status;
@@ -27,10 +27,6 @@ CmdStruct command_list[] = {
   {CMD_UPGRADE_DATA, 0xFFFFFFFF, Cmd_Upgrade_Data},
   {CMD_UPGRADE_INSTALL, 0x14, Cmd_Upgrade_Install},
   {CMD_QUERY_VERSION, 0x14, Cmd_Get_Version},
-  {CMD_QUERY_TEMP, 0x14, Cmd_Get_Temperature},
-  {CMD_QUERY_VOLTAGE, 0x14, Cmd_Voltage},
-  {CMD_SET_LOG_TIME, 0x20, Cmd_Set_Time},
-  {CMD_QUERY_LOG_TIME, 0x14, Cmd_Get_Time},
 
   {CMD_FOR_DEBUG, 0xFFFFFFFF, Cmd_For_Debug},
 };
@@ -539,18 +535,6 @@ uint32_t Cmd_For_Debug()
     val_x = (int32_t)Buffer_To_BE32(prdata + 12);
     val_y = (int32_t)Buffer_To_BE32(prdata + 16);
     ret = debug_sw_dac(sw_num, val_x, val_y);
-    FILL_RESP_MSG(CMD_FOR_DEBUG, ret, 4);
-    return ret;
-  } else if (temp == CMD_DEBUG_SW_ADC) {
-    memset(resp_buf.buf, 0, 8);
-    sw_num = Buffer_To_BE32(prdata + 8);
-    ret = debug_sw_adc(sw_num);
-    FILL_RESP_MSG(CMD_FOR_DEBUG, ret, 8);
-    return ret;
-  } else if (temp == CMD_DEBUG_VOL_ADC) {
-    memset(resp_buf.buf, 0, 4);
-    sw_num = Buffer_To_BE32(prdata + 8);
-    ret = debug_vol_adc(sw_num);
     FILL_RESP_MSG(CMD_FOR_DEBUG, ret, 4);
     return ret;
   } else if (temp == CMD_DEBUG_PIN) {

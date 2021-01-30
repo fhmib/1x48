@@ -51,8 +51,6 @@ typedef enum {
 
 typedef enum {
   CMD_DEBUG_SW_DAC        = 0x01,
-  CMD_DEBUG_SW_ADC        = 0x02,
-  CMD_DEBUG_VOL_ADC       = 0x03,
   CMD_DEBUG_PIN           = 0x05,
   CMD_DEBUG_CAL_SW        = 0x06,
   CMD_DEBUG_DUMP          = 0x09,
